@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const api = axios.create({ baseURL: "/api" });
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
+});
 
 // Attach the JWT (if present) to every outgoing request
 api.interceptors.request.use((config) => {
@@ -16,10 +18,12 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
     }
+
     return Promise.reject(err);
   }
 );
