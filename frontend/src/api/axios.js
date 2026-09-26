@@ -2,20 +2,30 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Attach the JWT (if present) to every outgoing request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Attach JWT to every request when available.
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
 
-// If the token is invalid/expired, clear it and bounce to login
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Handle expired or invalid JWT.
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
@@ -24,7 +34,7 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 

@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,75 +14,163 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName || !trimmedEmail || !password) {
+      setError("Please fill in all fields.");
       return;
     }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
+
     try {
-      await register(name, email, password);
+      await register(trimmedName, trimmedEmail, password);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      console.error("Registration error:", err);
+
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 w-full max-w-sm p-6 space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-sm space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      >
+        {/* Header */}
         <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-800">💰 Smart Expense Manager</h1>
-          <p className="text-sm text-slate-500 mt-1">Create your account</p>
+          <div className="mb-3 text-3xl">💰</div>
+
+          <h1 className="text-xl font-bold text-slate-800">
+            Smart Expense Manager
+          </h1>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Create your account
+          </p>
         </div>
 
+        {/* Name */}
         <div>
-          <label className="text-sm font-medium text-slate-600">Name</label>
+          <label
+            htmlFor="name"
+            className="text-sm font-medium text-slate-700"
+          >
+            Full Name
+          </label>
+
           <input
+            id="name"
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            onChange={(e) => {
+              setName(e.target.value);
+              setError("");
+            }}
+            placeholder="Enter your name"
+            autoComplete="name"
+            disabled={loading}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
             required
           />
         </div>
 
+        {/* Email */}
         <div>
-          <label className="text-sm font-medium text-slate-600">Email</label>
+          <label
+            htmlFor="email"
+            className="text-sm font-medium text-slate-700"
+          >
+            Email
+          </label>
+
           <input
+            id="email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError("");
+            }}
+            placeholder="Enter your email"
+            autoComplete="email"
+            disabled={loading}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
             required
           />
         </div>
 
+        {/* Password */}
         <div>
-          <label className="text-sm font-medium text-slate-600">Password</label>
+          <label
+            htmlFor="password"
+            className="text-sm font-medium text-slate-700"
+          >
+            Password
+          </label>
+
           <input
+            id="password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError("");
+            }}
+            placeholder="Minimum 6 characters"
+            autoComplete="new-password"
+            disabled={loading}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
             required
           />
+
+          <p className="mt-1 text-xs text-slate-400">
+            Password must contain at least 6 characters.
+          </p>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {/* Error */}
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
 
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? "Creating account..." : "Create Account"}
         </button>
 
-        <p className="text-sm text-center text-slate-500">
-          Already have an account? <Link to="/login" className="text-brand-600 font-medium">Sign in</Link>
+        {/* Login */}
+        <p className="text-center text-sm text-slate-500">
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            className="font-medium text-brand-600 hover:text-brand-700 hover:underline"
+          >
+            Sign In
+          </Link>
         </p>
       </form>
     </div>

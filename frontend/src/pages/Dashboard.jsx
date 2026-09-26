@@ -2,10 +2,22 @@ import React, { useEffect, useState } from "react";
 import StatCard from "../components/StatCard.jsx";
 import CategoryChart from "../components/CategoryChart.jsx";
 import MonthlyChart from "../components/MonthlyChart.jsx";
-import { fetchDashboardSummary, fetchMonthlyTrend } from "../api/expenses.js";
+import {
+  fetchDashboardSummary,
+  fetchMonthlyTrend,
+} from "../api/expenses.js";
 import { fetchBudget } from "../api/budget.js";
 
-const currency = (n) => (n || 0).toLocaleString(undefined, { style: "currency", currency: "USD" });
+// Change INR to USD only if your backend/database is actually using USD.
+const currency = (value) => {
+  const amount = Number(value) || 0;
+
+  return amount.toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  });
+};
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -15,63 +27,172 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchDashboardSummary(), fetchMonthlyTrend(), fetchBudget()])
-      .then(([s, t, b]) => {
-        setSummary(s);
-        setTrend(t);
-        setBudget(b);
-      })
-      .catch(() => setError("Could not load dashboard data. Is the backend server running?"))
-      .finally(() => setLoading(false));
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [summaryData, trendData, budgetData] = await Promise.all([
+          fetchDashboardSummary(),
+          fetchMonthlyTrend(),
+          fetchBudget(),
+        ]);
+
+        setSummary(summaryData);
+        setTrend(Array.isArray(trendData) ? trendData : []);
+        setBudget(budgetData);
+      } catch (err) {
+        console.error("Dashboard loading error:", err);
+        setError(
+          "Could not load dashboard data. Please check your connection."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
   }, []);
 
-  if (loading) return <p className="text-slate-500 text-sm">Loading dashboard...</p>;
-  if (error) return <p className="text-red-600 text-sm">{error}</p>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-sm text-slate-500">
+          Loading dashboard...
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+        <p className="text-sm text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6">
+        <p className="text-sm text-slate-500">
+          No dashboard data available.
+        </p>
+      </div>
+    );
+  }
+
+  const recentTransactions = Array.isArray(summary.recentTransactions)
+    ? summary.recentTransactions
+    : [];
+
+  const monthlyExpenses = Number(summary.monthlyExpenses) || 0;
+  const totalExpenses = Number(summary.totalExpenses) || 0;
+  const remainingBudget = Number(budget?.remaining) || 0;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-800">Dashboard</h2>
-        <p className="text-sm text-slate-500">Your spending at a glance</p>
+        <h2 className="text-lg font-semibold text-slate-800">
+          Dashboard
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          Your spending at a glance
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total expenses" value={currency(summary.totalExpenses)} />
-        <StatCard label="This month" value={currency(summary.monthlyExpenses)} />
+      {/* Statistics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Remaining budget"
-          value={currency(budget?.remaining)}
-          tone={budget?.remaining < 0 ? "danger" : "success"}
+          label="Total Expenses"
+          value={currency(totalExpenses)}
         />
-        <StatCard label="Recent transactions" value={summary.recentTransactions.length} />
+
+        <StatCard
+          label="This Month"
+          value={currency(monthlyExpenses)}
+        />
+
+        <StatCard
+          label="Remaining Budget"
+          value={currency(remainingBudget)}
+          tone={remainingBudget < 0 ? "danger" : "success"}
+        />
+
+        <StatCard
+          label="Recent Transactions"
+          value={recentTransactions.length}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-2">Spending by category (this month)</h3>
-          <CategoryChart data={summary.byCategory} />
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Category Chart */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold text-slate-700">
+            Spending by Category
+          </h3>
+
+          <CategoryChart data={summary.byCategory || []} />
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-2">Last 6 months</h3>
+
+        {/* Monthly Chart */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold text-slate-700">
+            Last 6 Months
+          </h3>
+
           <MonthlyChart data={trend} />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Recent transactions</h3>
-        {summary.recentTransactions.length === 0 ? (
-          <p className="text-sm text-slate-500">No transactions yet.</p>
+      {/* Recent Transactions */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700">
+          Recent Transactions
+        </h3>
+
+        {recentTransactions.length === 0 ? (
+          <div className="rounded-lg bg-slate-50 p-6 text-center">
+            <p className="text-sm text-slate-500">
+              No transactions yet.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {summary.recentTransactions.map((t) => (
-              <li key={t._id} className="py-2 flex justify-between text-sm">
-                <div>
-                  <p className="text-slate-800">{t.description || t.category}</p>
-                  <p className="text-slate-400 text-xs">{new Date(t.date).toLocaleDateString()} · {t.category}</p>
-                </div>
-                <p className="font-medium text-slate-800">{currency(t.amount)}</p>
-              </li>
-            ))}
+            {recentTransactions.map((transaction) => {
+              const amount = Number(transaction.amount) || 0;
+
+              return (
+                <li
+                  key={transaction._id}
+                  className="flex items-center justify-between gap-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-800">
+                      {transaction.description ||
+                        transaction.category ||
+                        "Expense"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      {transaction.date
+                        ? new Date(
+                            transaction.date
+                          ).toLocaleDateString("en-IN")
+                        : "No date"}{" "}
+                      · {transaction.category || "Other"}
+                    </p>
+                  </div>
+
+                  <p className="whitespace-nowrap text-sm font-semibold text-slate-800">
+                    {currency(amount)}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

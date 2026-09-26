@@ -1,4 +1,14 @@
 import api from "./axios";
 
-export const fetchBudget = (month) => api.get("/budget", { params: month ? { month } : {} }).then((r) => r.data);
-export const setBudget = (data) => api.put("/budget", data).then((r) => r.data);
+export const fetchBudget = async (month) => {
+  const response = await api.get("/budget", {
+    params: month ? { month } : {},
+  });
+
+  return response.data;
+};
+
+export const setBudget = async (data) => {
+  const response = await api.put("/budget", data);
+  return response.data;
+};

@@ -1,33 +1,91 @@
 import React from "react";
 
-export default function BudgetProgress({ amount, spent, remaining, percentUsed }) {
-  const isOverBudget = remaining < 0;
-  const isNearLimit = !isOverBudget && percentUsed >= 80;
+const currency = (value) => {
+  const amount = Number(value) || 0;
 
-  const barColor = isOverBudget ? "bg-red-500" : isNearLimit ? "bg-amber-500" : "bg-brand-500";
+  return amount.toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  });
+};
+
+export default function BudgetProgress({
+  amount = 0,
+  spent = 0,
+  remaining = 0,
+  percentUsed = 0,
+}) {
+  const budgetAmount = Number(amount) || 0;
+  const spentAmount = Number(spent) || 0;
+  const remainingAmount = Number(remaining) || 0;
+  const usagePercent = Number(percentUsed) || 0;
+
+  const isOverBudget = remainingAmount < 0;
+  const isNearLimit = !isOverBudget && usagePercent >= 80;
+
+  const barWidth = Math.min(100, Math.max(0, usagePercent));
+
+  const barColor = isOverBudget
+    ? "bg-red-500"
+    : isNearLimit
+      ? "bg-amber-500"
+      : "bg-brand-500";
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-      <div className="flex justify-between text-sm text-slate-600">
-        <span>Spent: <strong className="text-slate-800">{spent.toLocaleString(undefined, { style: "currency", currency: "USD" })}</strong></span>
-        <span>Budget: <strong className="text-slate-800">{amount.toLocaleString(undefined, { style: "currency", currency: "USD" })}</strong></span>
+    <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Amounts */}
+      <div className="flex flex-wrap justify-between gap-2 text-sm text-slate-600">
+        <span>
+          Spent:{" "}
+          <strong className="text-slate-800">
+            {currency(spentAmount)}
+          </strong>
+        </span>
+
+        <span>
+          Budget:{" "}
+          <strong className="text-slate-800">
+            {currency(budgetAmount)}
+          </strong>
+        </span>
       </div>
 
-      <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full ${barColor} transition-all`} style={{ width: `${Math.min(100, percentUsed)}%` }} />
+      {/* Progress */}
+      <div
+        className="h-3 w-full overflow-hidden rounded-full bg-slate-100"
+        aria-label={`Budget usage: ${Math.round(usagePercent)}%`}
+      >
+        <div
+          className={`h-full rounded-full ${barColor} transition-all duration-500`}
+          style={{ width: `${barWidth}%` }}
+        />
       </div>
 
+      {/* Percentage */}
+      <div className="flex justify-between text-xs text-slate-500">
+        <span>Budget used</span>
+
+        <span className="font-medium text-slate-700">
+          {Math.round(usagePercent)}%
+        </span>
+      </div>
+
+      {/* Status */}
       {isOverBudget ? (
-        <p className="text-sm text-red-600 font-medium">
-          You've gone {Math.abs(remaining).toLocaleString(undefined, { style: "currency", currency: "USD" })} over budget this month.
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
+          You've gone {currency(Math.abs(remainingAmount))} over budget this
+          month.
         </p>
       ) : isNearLimit ? (
-        <p className="text-sm text-amber-600 font-medium">
-          Heads up — you've used {percentUsed}% of your budget. {remaining.toLocaleString(undefined, { style: "currency", currency: "USD" })} left.
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-600">
+          Heads up — you've used {Math.round(usagePercent)}% of your budget.
+          {" "}
+          {currency(remainingAmount)} left.
         </p>
       ) : (
-        <p className="text-sm text-slate-500">
-          {remaining.toLocaleString(undefined, { style: "currency", currency: "USD" })} remaining this month.
+        <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          {currency(remainingAmount)} remaining this month.
         </p>
       )}
     </div>
